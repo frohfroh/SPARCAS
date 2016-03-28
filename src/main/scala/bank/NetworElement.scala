@@ -5,6 +5,6 @@ abstract class NetworElement extends Ordered[NetworElement] {
   def DoubleAttributes: collection.mutable.Map[String, Double] = Attribute.getDoubles(atts); ;
   var atts: collection.mutable.Map[String, Any];
   override def toString = id.toString()
-  def compare(that : NetworElement) = this.id.id.compare(that.id.id)
-  
+  def compare(that: NetworElement) = this.id.id.compare(that.id.id)
+
 }

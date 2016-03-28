@@ -3,12 +3,12 @@ package example
 import vdf.VDF
 /**
  * constant time VDF function to serve as an example
- * 
+ *
  * In order to see a more interesting example, see BPR
  */
 object CteTime extends VDF {
-  
-    /**
+
+  /**
    * No attributes at all
    */
   @Override
@@ -19,9 +19,9 @@ object CteTime extends VDF {
    */
   @Override
   def valueAt(vol: Double, is: Array[Double]): Double = 1.0
-  
+
   /**
-   * the derivative of a constant function is 0 
+   * the derivative of a constant function is 0
    */
   @Override
   def derivative(vol: Double, is: Array[Double]): Double = 0.0

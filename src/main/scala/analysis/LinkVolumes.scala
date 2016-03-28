@@ -11,7 +11,7 @@ object LinkVolumesFactory extends SimpleTranslatorFactory[Map[Link, Double], Lin
   }
 }
 //If a link does not appear on the assignment it will not appear on the answer
-class LinkVolumes(NodeToPos: Map[Node, Int], LinkToPos: Map[Link, Int]) extends Translator[Map[Link, Double]](NodeToPos, LinkToPos) {
+case class LinkVolumes(NodeToPos: Map[Node, Int], LinkToPos: Map[Link, Int]) extends Translator[Map[Link, Double]](NodeToPos, LinkToPos) {
   def combine(left: Map[Link, Double], right: Map[Link, Double], left_proportion: Double): Map[Link, Double] = {
     val links = right.keys ++ left.keys
     val ab = links map (link => (link, right.getOrElse(link, 0.0) * (1 - left_proportion) + left.getOrElse(link, 0.0) * left_proportion))
