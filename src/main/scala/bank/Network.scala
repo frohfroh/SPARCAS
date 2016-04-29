@@ -38,8 +38,6 @@ class Network {
   /**
    * performs a biconjugated Frank Wolf asssigment , check BCFW for more information
    */
-  //TODO delete assign and substitute it everywhere by assign2 - DONE
-  //after that get rid of all those awfull Factory methods like LinksVolumeDurFactory et al
   def assign[T, F, A](m: Matrix, sc: bcfw.stoppingCriteria, analyser: (Map[Node, Int], Map[Link, Int]) => A, subset: Link => Boolean = (q => true), useConnectors: Boolean = true)(implicit ev: A => FinishingAnalisator[T, F]): F = {
     val (assignment, (nodeToPos, linkToPos)) = grossNetwork(subset)
     assignment.sc = sc
@@ -58,6 +56,32 @@ class Network {
     ev(truAnalyser).finalize(bruto)
   }
   /**
+   * performs a All or nothing assignment , arguments are the same as in assign
+   */
+  def AllOrNothingAssign[T, F, A](m: Matrix, analyser: (Map[Node, Int], Map[Link, Int]) => A, cost: String, 
+      subset: Link => Boolean = (q => true), useConnectors: Boolean = true)(implicit ev: A => FinishingAnalisator[T, F]): F = {
+    object uncapacitatedTime extends VDF {
+      def attributesNames(): Array[String] = Array(cost)
+      def derivative(vol: Double, cost: Array[Double]): Double = 0.0
+      def integral(vol: Double, cost: Array[Double]): Double = cost(0) * vol
+      def valueAt(vol: Double, cost: Array[Double]): Double = cost(0)
+    }
+    val (assignment, (nodeToPos, linkToPos)) = grossNetwork(subset, function = {_=> uncapacitatedTime})
+    val matrix: Array[Array[Double]] = m.toArrays(nodeToPos)
+    assignment.OD = matrix
+    //TODO break bcfw.stoppingCriteria into an interface and a class implementing it
+    object StopAtZerothIteration extends bcfw.stoppingCriteria(0.0 , 0){
+      override def  shouldStop(obtained : stoppingCriteria ) : Boolean = {
+        true
+      }
+    }
+    assignment.sc =  StopAtZerothIteration
+    val truAnalyser = analyser(nodeToPos, linkToPos)
+    val bruto = assignment.assign(truAnalyser)
+    ev(truAnalyser).finalize(bruto)
+  }
+
+  /**
    * calculates the objective function given a certain link volume
    */
   def objectiveFunction(subset: Link => Boolean = (q => true), useConnectors: Boolean, vols: Map[Link, Double]): Double = {
@@ -72,7 +96,7 @@ class Network {
    * return the low-level network and the maps allowing to go from the elements of this
    * (high-level) network to the elements of the low-level one
    */
-  def grossNetwork(subset: Link => Boolean = (q => true)): (BCFW, (Map[Node, Int], Map[Link, Int])) = {
+  def grossNetwork(subset: Link => Boolean = (q => true),function : Link => VDF =  {l : Link => l.function} ): (BCFW, (Map[Node, Int], Map[Link, Int]) ) = {
     val assignment: BCFW = new BCFW(null);
     assignment.V = nodes.size;
     assignment.Centroides = centroides.size
@@ -92,9 +116,9 @@ class Network {
     val arriving: Array[Array[Int]] = NodeArray map (node => (node.arriving map (LinkToPos.getOrElse(_, -1))).toArray)
     assignment.exitingLinks = exiting map (_ filter (_ >= 0)) //remove links that don't have the desired mode
     assignment.arrivingLinks = arriving map (_ filter (_ >= 0))
-    val AssignmentAttributes = LinkArray map (link => (link.function.attributesNames() map (link.DoubleAttributes(_))).toArray)
+    val AssignmentAttributes = LinkArray map (link => (function(link).attributesNames() map (link.DoubleAttributes(_))).toArray)
     assignment.linkParameters = AssignmentAttributes
-    val vdfs = LinkArray map (_.function)
+    val vdfs = LinkArray map (function(_))
     assignment.VDFs = vdfs
     (assignment, (NodeToPos, LinkToPos))
   }
@@ -170,5 +194,17 @@ class Network {
     for (link <- links) link._2.atts - attName
     val pos = LinkAttributes.indexWhere(_.Name equals attName)
     LinkAttributes.remove(pos)
+  }
+  //TODO should one clean teh IDCatalog? Important for future editing macros
+  def deleteNode(id : ID , domino : Boolean = false) ={
+    val node : Node =  nodes(id)
+    val links = node.arriving++node.exiting
+    if(!links.isEmpty && !domino) throw new Exception("there are links arriving oor leaving the node")
+    links.map {_.id }.map{deleteLink(_)}
+    nodes -= id 
+  }
+
+  def deleteLink(id : ID) = {
+    links -= id
   }
 }
