@@ -4,6 +4,7 @@ import bcfw.FinishingAnalisator
 import bank.Node
 import bank.Link
 
+//TODO check if this object is useless and remove it
 object LinksVolumeDurFactory extends TranslatorFactory[Array[Double], Map[Link, Double], LinksVolumesDur] {
   def createFinishingAnalyser(NodeToPos: Map[Node, Int], LinkToPos: Map[Link, Int]): LinksVolumesDur = {
     new LinksVolumesDur(NodeToPos, LinkToPos)
@@ -23,7 +24,7 @@ case class LinksVolumesDur(NodeToPos: Map[Node, Int], LinkToPos: Map[Link, Int])
     }
     return vols
   }
-  def combine(left: Array[Double], right: Array[Double], left_proportion: Double): Array[Double] = {
+  def combine(left: Array[Double], right: Array[Double], left_proportion: Double): Array[Double] = {   
     val righ_proportion = 1 - left_proportion
     val vols = new Array[Double](LinkToPos.size)
     for (i <- 0 until vols.size) {

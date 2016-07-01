@@ -4,6 +4,7 @@ import bcfw.FinishingAnalisator
 import bank.Node
 import bank.Link
 import scala.reflect.runtime.{ universe => ru }
+import bank.Matrix
 /**
  * This object creates analysators to pass to an assignment
  * The analysis allows to determine the flow on each link of paths corresponding to a criteria.
@@ -12,16 +13,38 @@ import scala.reflect.runtime.{ universe => ru }
 object NetworkResult {
   /**creates an analysator
    * 
-   * @param  attributes this function shall get all information one wants from a links and return an object with these values.
+   * @param  attributes this function shall get all information one wants from a link and return an object with these values.
  * While it is expected that most often it will simply get network attributes from links(hence its name), it can do anything based 
  * on a link object and not only its attributes
- * @param filter Given a sequence of attributes (as prepared by the parameter attribute) , decide if it includes or not a link on the analysis
+ * @param filter Given a sequence of attributes (as prepared by the parameter attribute) , decide if it includes or not a path on the analysis
  * @param slaveDemand while the assignment will always be performed according to the demand passed to the assign method, the flows
  * resulting from this analysis can be of another matrix. If None , the own demand matrix will be used
  * 
    */
-  def apply[A](attributes: Link => A, filter: Seq[A] => Boolean, slaveDemand: Option[Array[Array[Double]]] = None): (Map[Node, Int], Map[Link, Int]) => FinishingAnalisator[Array[Double], Map[Link, Double]] = {
+  @deprecated("use teh method create with a matrix and not an array","SNAPSHOT")
+  def apply[A](attributes: Link => A, 
+               filter: Seq[A] => Boolean, 
+               slaveDemand: Option[Array[Array[Double]]] = None): (Map[Node, Int], Map[Link, Int]) => FinishingAnalisator[Array[Double], Map[Link, Double]] = {
     (NodeToPos: Map[Node, Int], LinkToPos: Map[Link, Int]) => NetworkResult[A](attributes, filter, slaveDemand, NodeToPos, LinkToPos)
+  }
+               //TODO remove method above and rename create to apply
+                 /**creates an analysator
+   * 
+   * @param  attributes this function shall get all information one wants from a link and return an object with these values.
+ * While it is expected that most often it will simply get network attributes from links(hence its name), it can do anything based 
+ * on a link object and not only its attributes
+ * @param filter Given a sequence of attributes (as prepared by the parameter attribute) , decide if it includes or not a path on the analysis
+ * @param slaveDemand while the assignment will always be performed according to the demand passed to the assign method, the flows
+ * resulting from this analysis can be of another matrix. If None , the own demand matrix will be used
+ * 
+   */
+  def create[A](attributes: Link => A, 
+               filter: Seq[A] => Boolean, 
+               slaveDemand: Option[Matrix] = None): (Map[Node, Int], Map[Link, Int]) => FinishingAnalisator[Array[Double], Map[Link, Double]] = {
+    (NodeToPos: Map[Node, Int], LinkToPos: Map[Link, Int]) => {
+      val nm = slaveDemand.map { _.toArrays(NodeToPos) }
+      NetworkResult[A](attributes, filter, nm, NodeToPos, LinkToPos)
+    }
   }
 }
 

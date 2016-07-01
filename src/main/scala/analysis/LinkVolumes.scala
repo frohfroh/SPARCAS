@@ -4,12 +4,7 @@ import bank.Node
 /**
  * keeps the link volumes of an assignment
  */
-//TODO retirar Factory e transformar simplesmente num objeto companheiro?
-object LinkVolumesFactory extends SimpleTranslatorFactory[Map[Link, Double], LinkVolumes] {
-  def createAnalyser(NodeToPos: Map[Node, Int], LinkToPos: Map[Link, Int]): LinkVolumes = {
-    new LinkVolumes(NodeToPos, LinkToPos)
-  }
-}
+
 //If a link does not appear on the assignment it will not appear on the answer
 case class LinkVolumes(NodeToPos: Map[Node, Int], LinkToPos: Map[Link, Int]) extends Translator[Map[Link, Double]](NodeToPos, LinkToPos) {
   def combine(left: Map[Link, Double], right: Map[Link, Double], left_proportion: Double): Map[Link, Double] = {

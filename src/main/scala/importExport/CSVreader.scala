@@ -6,6 +6,7 @@ import bank.Attribute
 import bank.Node
 import bank.Link
 import bank.ArrayMatrix
+import java.io._
 /**
  * imports (reads) a network and/or matrices from csv files 
  */
@@ -58,8 +59,19 @@ object CSVreader {
      val ndsAttsT = ndsAtts2.map(_._2).transpose.map{headerNodes.zip(_).toMap}  //each element is the attributes map os a node
      val headerLinks = lksAtts2.map(_._1)
       val lksAttsT = lksAtts2.map(_._2).transpose.map{headerLinks.zip(_).toMap}  //each element is the attributes map os a node
-
-     val nodes = (for( atts  <- ndsAttsT) yield {//TODO //FIXME //XXX //HACK 
+      
+     val posNode = headerNodes.indexOf { "Node" }
+     println("Node é o "+posNode)
+     val atsNode = ndsAtts2(posNode)._2
+     for(al <- atsNode.take(10)){
+       println("")
+       println(al)
+       println(al.getClass())
+     }
+     
+     
+     
+     val nodes = (for( atts  <- ndsAttsT) yield {
        val isCentroid = atts(centroid)
        val node = isCentroid match {
          case 1 => net.addCentroid(null, mutable.Map() ++ atts)
@@ -104,6 +116,8 @@ object CSVreader {
     val untyped = attributes zip  matt
     untyped.map({case (name , values) => (name,defineType(values) )})
   }
+  def mySplit(line : String , sep : String) : Array[String] =  line.split(sep) filter (_ != "")
+
   def defineType(arr : Array[String]) : Array[_ <: Any] = {
     def trier(funcs : List[String => Any]) : Array[_ <: Any] = funcs match {
         case Nil => arr
@@ -128,7 +142,6 @@ object CSVreader {
     trier( {x: String => x.toInt} :: {x: String => x.toLong} :: {x: String => x.toDouble} :: Nil)    
 	}
   
-  def mySplit(line : String , sep : String) : Array[String] =  line.split(sep) filter (_ != "")//TODO internalizar  (inner - ize) , ou seja colocar em namespace mais específico
   /**
    * reads a matrix from a csv file
    * 
@@ -146,9 +159,16 @@ object CSVreader {
   def readMatrix(net : Network , file: scala.io.Source,  att : String , from : String , to : String , value : String , sep : String) : ArrayMatrix = {
     val columns : Array[_ <: (String, Array[_])] = readCSVtyped(file , sep)
     val mapa = columns.map({case (name , values) => (name,values.toList )}).toList.toMap
-    val nodde_att = net.nodes.values.map { x => (x.atts(att) , x) }.toMap
+    val nodde_att = net.nodes.values.map { x => (x.atts(att) , x) }.toMap//TODO centroids instead of nodes for better performance?
     val cents = net.centroides.values.toList
     val node2pos = cents.zipWithIndex.toMap
+    /*val mf = mapa(from)
+    for (mfi <- mf){
+      println(mfi)
+      val a =  mfi.toString().toInt
+      println(a*2)
+    }
+    val  origin2 = mf.map {x=>  node2pos(nodde_att(x)) }*/
     val origin = mapa(from).map {x=>  node2pos(nodde_att(x)) }
     val destination = mapa(to).map { x=>  node2pos(nodde_att(x)) }
     val triples = (mapa(value) , origin , destination).zipped.toList
@@ -163,6 +183,21 @@ object CSVreader {
         }
     }
     new ArrayMatrix(aOa , node2pos map(_.swap) )
+  }
+  /**
+   * export matrix to csv
+   */
+  def writeMatrix(mat : ArrayMatrix , file: String , att : String , sep : String){
+    val pw = new PrintWriter(new File(file ))
+    pw.println("from"+sep+"to"+sep+"value")
+    val n = mat.raw.length
+   for(i<- 0 until n ; j <- 0 until n){
+     val af = mat.mapa(i).atts(att)
+     val at = mat.mapa(j).atts(att)
+     val v = mat.raw(i)(j)
+     if(v != 0.0) pw.println(af+sep+at+sep+v)
+   }
+    pw.close()
   }
   
 }
