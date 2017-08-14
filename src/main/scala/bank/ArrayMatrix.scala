@@ -1,6 +1,6 @@
 package bank
 
-class ArrayMatrix(val raw: Array[Array[Double]], val mapa: scala.collection.Map[Int, Node]) extends Matrix {
+class ArrayMatrix(val raw: Array[Array[Double]], val mapa: scala.collection.Map[Int, Node]) extends Matrix[Double] {
   val Node2Int = mapa map (_.swap)
   def toArrays(mapaNovo: Map[Node, Int]): Array[Array[Double]] = {
     val oldmap = Node2Int

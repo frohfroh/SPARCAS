@@ -15,7 +15,7 @@ case class LinkVolumes(NodeToPos: Map[Node, Int], LinkToPos: Map[Link, Int]) ext
     soma2 toMap
   }
 
-  def simplePath2(caminhos: Map[(Node, Node), Array[Link]], mat: bank.Matrix): Map[Link, Double] = {
+  def simplePath2(caminhos: Map[(Node, Node), Array[Link]], mat: bank.Matrix[Double]): Map[Link, Double] = {
     val volumados = (caminhos.toArray map { case (par, links) => (mat.value(par), links) })
     val linksVolumadosRepetidos: Array[(Link, Double)] = volumados flatMap { case (vol, links) => links map ((_, vol)) }
     val linkVolumados: Map[Link, Array[(Link, Double)]] = (linksVolumadosRepetidos groupBy (_._1)) toMap

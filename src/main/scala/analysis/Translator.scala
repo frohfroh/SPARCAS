@@ -29,7 +29,7 @@ abstract class Translator[T](NodeToPos: Map[Node, Int], LinkToPos: Map[Link, Int
   val PosToNode: Map[Int, Node] = NodeToPos.map(_.swap)
   val PosToLink: Map[Int, Link] = LinkToPos.map(_.swap)
 
-  def simplePath2(caminhos: Map[(Node, Node), Array[Link]], mat: Matrix): T;
+  def simplePath2(caminhos: Map[(Node, Node), Array[Link]], mat: Matrix[Double]): T;
   /**
    * *
    * 	 path_matrix is such that path_matrix[a][b][c] is the c-th link on the path from node a to node b

@@ -4,7 +4,10 @@ import bcfw.FinishingAnalisator
 import bank.Node
 import bank.Link
 import scala.reflect.ClassTag
+import breeze.linalg.{DenseMatrix => DM , _}
+import bank.BreezeMatrix
 
+     //TODO check if result is good and the same as MatrixResults
 
 /**
  * only used to organize the parameter of MatrixResult apply and avoiding copying this huge list and signature multiple times
@@ -16,7 +19,7 @@ import scala.reflect.ClassTag
    * @param evaluator Given a sequence of values of links in a path (as prepared by the parameter attributes_value) , calculates the value of the whole path
    * @param aggregator Given two paths with their values and respective demands, calculates a new value and combined demand.
  */
-case class MatrixResultParameter[ A, B, R](attributes_filter: Link => A,
+case class BreezeMatrixResultParameter[ A, B, R](attributes_filter: Link => A,
                           attributes_value: Link => B,
                           filter: Seq[A] => Boolean, 
                           evaluator: Seq[B] => R, 
@@ -28,14 +31,14 @@ case class MatrixResultParameter[ A, B, R](attributes_filter: Link => A,
  * Of the paths used by each OD pair, one can filter a subset and then calculate a value for each of these paths, and
  * then aggregate these values
  */
-object MatrixResult {
-  //the Array[Array[(Double, R)] is a matrix of (Double, R) where
+object BreezeMatrixResult {
+  //the DM[(Double, R)] is a matrix of (Double, R) where
   //the double is the associated demand to this cell(normalized)
   //R is the value obtained by this demand
-  type MatrixResultFA[R] =  FinishingAnalisator[Array[Array[(Double, R)]], scala.collection.Map[Node, Map[Node, R]]]
-  type MatrixResultReturn[R] =     (Map[Node, Int], Map[Link, Int]) => MatrixResultFA[R]
+  type BreezeMatrixResultFA[R] =  FinishingAnalisator[DM[(Double, R)], BreezeMatrix[R ,DM[R] ]]
+  type BreezeMatrixResultReturn[R] =     (Map[Node, Int], Map[Link, Int]) => BreezeMatrixResultFA[R]
  
-
+  //TODO rename foo apply
   /**
    * this method is used as a factory for MatrixResult 
 	 *@param mrp see the case class MatrixResultParameter for understanding the fields
@@ -46,23 +49,9 @@ object MatrixResult {
    * one iteration may not be present in the optimal. BCFW would take it (slowly) to 0.0 but such a maximum 
    * would not be correct
    */
-  def foo[ A, B, R: ClassTag](mrp : MatrixResultParameter[ A, B, R]): MatrixResultReturn[R] = {     
+  def foo[ A, B, R: ClassTag](mrp : BreezeMatrixResultParameter[ A, B, R]): BreezeMatrixResultReturn[R] = {     
       (NodeToPos: Map[Node, Int], LinkToPos: Map[Link, Int]) =>
-        new MatrixResult(mrp,NodeToPos, LinkToPos)
-            
-  }
-      //TODO substitute apply by foo
-    @deprecated( "use foo", "SNAPSHOT" )
-    def apply[ A, B, R: ClassTag](attributes_filter: Link => A,
-                        attributes_value: Link => B,
-                        filter: Seq[A] => Boolean, 
-                        evaluator: Seq[B] => R, 
-                        aggregator:((Double, R),(Double,R)) => (Double, R)): 
-    (Map[Node, Int], Map[Link, Int]) => FinishingAnalisator[Array[Array[(Double, R)]], scala.collection.Map[Node, Map[Node, R]]] = {
-       
-    (NodeToPos: Map[Node, Int], LinkToPos: Map[Link, Int]) =>
-      new MatrixResult(MatrixResultParameter[  A, B, R](attributes_filter, attributes_value, filter, evaluator, aggregator),NodeToPos, 
-          LinkToPos)
+        new BreezeMatrixResult(mrp,NodeToPos, LinkToPos)
             
   }
 }
@@ -70,12 +59,9 @@ object MatrixResult {
 //B attributes for calculation
 //R value of each path that is also the final result
 
-//TODO once matrix(or arrray matrix) is generic , get rid of the Map[Node,Map[Node,?]] , see multi dimensional arrays
-//with that une can reimplement map  
-
- class MatrixResult[ A, B, R : ClassTag](val mrp : MatrixResultParameter[ A, B, R] , 
+ class BreezeMatrixResult[ A, B, R : ClassTag](val mrp : BreezeMatrixResultParameter[ A, B, R] , 
         val NodeToPos: Map[Node, Int], val LinkToPos: Map[Link, Int])
-    extends  MatrixResult.MatrixResultFA[R] {
+    extends  BreezeMatrixResult.BreezeMatrixResultFA[R] {
 
   val pos_Link = LinkToPos.map(_.swap).toArray
   val pos2node = NodeToPos.map(_.swap)
@@ -84,38 +70,30 @@ object MatrixResult {
   val vAttributes = Links.map({ mrp.attributes_value(_) })
 
   //TODO does using the matriz_od is any better then normalize everything and deal with it later(after assignment, outside of this framework)?
-  def simplePath(path_matrix: Array[Array[Array[Int]]], matriz_od: Array[Array[Double]]): Array[Array[(Double, R )]] = { 
+  def simplePath(path_matrix: Array[Array[Array[Int]]], matriz_od: Array[Array[Double]]): DM[(Double, R)] = { 
     
-    val filterLinkValue = path_matrix.map { linha => linha.map { celula => celula.map(l => fAttributes(l)) } }
-    val filteredB = filterLinkValue.map { linha => linha.map { celula => mrp.filter(celula) } } 
-    val filtered = filteredB.map { linha => linha.map { celula => if (celula) 1.0 else 0.0 } }
-    val valueLinkValue = path_matrix.map { linha => linha.map { celula => celula.map(l => vAttributes(l)) } }
-    val evaluated = valueLinkValue.map { linha => linha.map { celula => mrp.evaluator(celula) } }
-    val zipLines = filtered zip evaluated
-    zipLines.map({ case (bools, rs) => bools zip rs })
+     val dm = bank.BreezeMatrix.fromAoA(path_matrix)
+     val filterLinkValue2 = dm.mapValues { _.map { fAttributes } }
+     val filteredB2 = filterLinkValue2.mapValues { mrp.filter }
+     val filtered2 = filteredB2.mapValues { if (_) 1.0 else 0.0 }
+     val valueLinkValue2 = dm.mapValues { _.map { vAttributes } }
+     val evaluated2 = valueLinkValue2.mapValues {  mrp.evaluator(_) }
+     filtered2 zip evaluated2
   }
-
-  def combine(left: Array[Array[(Double, R)]], right: Array[Array[(Double, R)]], left_proportion: Double): Array[Array[(Double, R)]] = {
-    val n = left.length
+ def combine(left: DM[(Double, R)], right: DM[(Double, R)], left_proportion: Double): DM[(Double, R)] = {
     val right_proportion = 1.0 - left_proportion
-    val ans = new Array[Array[(Double, R)]](n)
-    for (i <- 0 until n) {
-      val z = left(i) zip right(i)
-      ans(i) = z.map({ case ((lv, lr), (rv, rr)) => mrp.aggregator((lv * left_proportion, lr), (rv * right_proportion, rr)) })
+    def comb(lvr : (Double,R), rvr :(Double,R)) = {
+      val (lv,lr) = lvr
+      val (rv, rr) = rvr
+      mrp.aggregator((lv * left_proportion, lr), (rv * right_proportion, rr))
     }
-    ans
+    DM.zipMap[(Double,R),(Double,R)].map(left,right , comb)
   }
 
-  def finalize(brute: Array[Array[(Double, R)]]): scala.collection.Map[Node, Map[Node, R]] = {
-    val n = brute.length
-    val ans = scala.collection.mutable.Map[Node, Map[Node, R]]()
-
-    for (i <- 0 until n) yield {
-      val node_from = pos2node(i)
-      val smap = ((0 until n) zip brute(i)).map({ case (t, (d, r)) => (pos2node(t), r) }).toMap
-      ans(node_from) = smap
-    }
-    ans
+  def finalize(brute: DM[(Double, R)]) :BreezeMatrix[R,DM[R]] = {
+    val cleanM = brute.mapValues(_._2)
+    val e = new BreezeMatrix[R,DM[R]](cleanM , pos2node)
+    e
   }
 }
  

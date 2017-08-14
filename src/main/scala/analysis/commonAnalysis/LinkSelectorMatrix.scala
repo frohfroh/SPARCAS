@@ -4,11 +4,12 @@ import bank.Link
 import bcfw.FinishingAnalisator
 import bank.Node
 import analysis.MatrixResult
+import breeze.{linalg => bz}
 import analysis.MatrixResultParameter
 
 /**
- * Is used to create select links that should return a matrix 
- */
+* Is used to create select links that should return a matrix 
+*/
 object LinkSelectorMatrix {
   
   def crossing_links(links : Set[Link])(link: Link): Boolean = { links.contains(link) }
@@ -27,7 +28,6 @@ object LinkSelectorMatrix {
   def agregator(path1: (Double, Double) ,path2: (Double, Double) ): (Double, Double) = {
     (path1._1+path2._1, path1._1*path1._2+path2._1*path2._2)
   }
-  
   def MRparameter(links : Set[Link]) : MatrixResultParameter[ Unit, Boolean, Double] = {
     MatrixResultParameter(get_nothing _ ,
                 attributes_value = crossing_links(links) _ ,
@@ -36,11 +36,11 @@ object LinkSelectorMatrix {
   /**
    * creates an analysator that gets the matrix of the volumes proportions that pass through certain links
    * If it is multiplied by the demand we get the actual volumes passing through these links
-   * one can also get the demand by using demand
-   * @param links the set of links
+   * one can also get the demand by using demand   
+   *  @param links the set of links
    */
   def apply(links : Set[Link]) :  
-    (Map[Node, Int], Map[Link, Int]) => MatrixResult.MatrixResultFA[Double] = {
+  (Map[Node, Int], Map[Link, Int]) => MatrixResult.MatrixResultFA[Double] = {
     MatrixResult.foo(MRparameter(links))
   }
   def apply(links : => Set[Long]) :  
@@ -57,17 +57,15 @@ object LinkSelectorMatrix {
   }  
   def usingLong(foo :  MatrixResultParameter[Unit,Boolean,Double] => MatrixResult.MatrixResultReturn[Double])(links : => Set[Long]) :  
     (Map[Node, Int], Map[Link, Int]) => MatrixResult.MatrixResultFA[Double] = {
-     def init(nodesMap : Map[bank.Node,Int],linksMap : Map[bank.Link,Int]) :  MatrixResult.MatrixResultFA[Double]  = {
-      val allLinks = linksMap.keySet
+     def init(nodesMap : Map[bank.Node,Int],linksMap : Map[bank.Link,Int]) :  MatrixResult.MatrixResultFA[Double]  = {      val allLinks = linksMap.keySet
       val id2link = allLinks.map { link => (link.id.id , link) }.toMap
       val selectedLinks = links.map { id2link(_) }
-      val fun = foo(MRparameter(selectedLinks))
+      val fun = foo(MRparameter(selectedLinks))     
       fun(nodesMap , linksMap)
      }
      init
   }
-    
-    
+        
   class VolumeMatrix[ A, B](mrp : MatrixResultParameter[  A, B, Double] ,
    NodeToPos: Map[Node, Int],  LinkToPos: Map[Link, Int])   extends MatrixResult(mrp , NodeToPos , LinkToPos ){
     var mod : Option[Array[Array[Double]]] = None
@@ -98,7 +96,7 @@ object VolumeMatrix {
         new VolumeMatrix(mrp,NodeToPos, LinkToPos)
             
   }
-}
-
-
+}  
+    
+    
 }

@@ -21,13 +21,14 @@ object NetworkResult {
  * resulting from this analysis can be of another matrix. If None , the own demand matrix will be used
  * 
    */
-  @deprecated("use teh method create with a matrix and not an array","SNAPSHOT")
-  def apply[A](attributes: Link => A, 
-               filter: Seq[A] => Boolean, 
-               slaveDemand: Option[Array[Array[Double]]] = None): (Map[Node, Int], Map[Link, Int]) => FinishingAnalisator[Array[Double], Map[Link, Double]] = {
+    @deprecated("use teh method create with a matrix and not an array","SNAPSHOT") 
+  def apply[A](attributes: Link => A,
+      filter: Seq[A] => Boolean,
+      slaveDemand: Option[Array[Array[Double]]] = None): (Map[Node, Int], Map[Link, Int]) => FinishingAnalisator[Array[Double], Map[Link, Double]] = {
     (NodeToPos: Map[Node, Int], LinkToPos: Map[Link, Int]) => NetworkResult[A](attributes, filter, slaveDemand, NodeToPos, LinkToPos)
   }
-               //TODO remove method above and rename create to apply
+      
+                   //TODO remove method above and rename create to apply
                  /**creates an analysator
    * 
    * @param  attributes this function shall get all information one wants from a link and return an object with these values.
@@ -40,7 +41,7 @@ object NetworkResult {
    */
   def create[A](attributes: Link => A, 
                filter: Seq[A] => Boolean, 
-               slaveDemand: Option[Matrix] = None): (Map[Node, Int], Map[Link, Int]) => FinishingAnalisator[Array[Double], Map[Link, Double]] = {
+               slaveDemand: Option[Matrix[Double]] = None): (Map[Node, Int], Map[Link, Int]) => FinishingAnalisator[Array[Double], Map[Link, Double]] = {
     (NodeToPos: Map[Node, Int], LinkToPos: Map[Link, Int]) => {
       val nm = slaveDemand.map { _.toArrays(NodeToPos) }
       NetworkResult[A](attributes, filter, nm, NodeToPos, LinkToPos)
